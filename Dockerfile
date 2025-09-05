@@ -15,4 +15,4 @@ COPY . .
 CMD ["python", "app.py"]
 
 
-https://chatgpt.com/c/68b9b609-2770-8329-b92d-8dd4fedd2390 -- open in chrome to continue
+# https://chatgpt.com/c/68b9b609-2770-8329-b92d-8dd4fedd2390 -- open in chrome to continue
