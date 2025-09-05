@@ -1,0 +1,208 @@
+Developer → Docker → GitHub → GitHub Actions → Docker Hub → Render → Monitoring
+
+Step 1: Build Flask App
+
+File: app.py
+
+import os
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "🚀 Hello from my DevOps Project!"
+
+@app.route("/healthz")
+def health():
+    return "OK", 200
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))  # Render uses $PORT
+    app.run(host="0.0.0.0", port=port)
+
+
+File: requirements.txt
+
+flask==2.2.5
+gunicorn==21.2.0
+
+
+👉 Why
+
+Flask is our web framework.
+
+healthz route helps monitoring.
+
+We use os.environ.get("PORT") because Render provides a port dynamically.
+
+gunicorn is a production-ready server (Flask built-in server is only for dev).
+
+👉 What happened
+You now have a working app that can run locally and in cloud.
+
+🔹 Step 2: Run Locally
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python app.py
+
+
+Open http://127.0.0.1:5000
+.
+
+👉 Why
+To test functionality before adding Docker or deployment.
+
+🔹 Step 3: Dockerize App
+
+File: Dockerfile
+
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+
+
+👉 Why
+
+Docker creates a consistent environment (Python, dependencies, code).
+
+Any machine/container can run this app the same way.
+
+Build & Run
+
+docker build -t flask-devops-app .
+docker run -p 5000:5000 flask-devops-app
+
+
+👉 Open http://localhost:5000
+.
+
+🔹 Step 4: Push Code to GitHub
+git init
+git add .
+git commit -m "First commit"
+git branch -M main
+git remote add origin https://github.com/<your-username>/flask-devops-project.git
+git push -u origin main
+
+
+👉 Why
+
+GitHub is our version control & CI/CD trigger.
+
+Every push → pipeline runs.
+
+🔹 Step 5: GitHub Actions (CI/CD)
+
+File: .github/workflows/ci-cd.yml
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build & Push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/flask-devops-app:latest .
+          docker push ${{ secrets.DOCKER_USERNAME }}/flask-devops-app:latest
+
+
+👉 Secrets in GitHub
+
+DOCKER_USERNAME = your Docker Hub username (ex: mhanumanthu)
+
+DOCKER_PASSWORD = your Docker Personal Access Token
+
+👉 Why
+
+This pipeline automates:
+
+Build Docker image
+
+Push to Docker Hub
+
+No manual builds needed.
+
+👉 What happened
+Every git push → GitHub builds & stores your image in Docker Hub.
+
+🔹 Step 6: Deploy on Render
+
+Sign up at Render
+ (free).
+
+New Web Service → Connect your GitHub repo.
+
+Settings:
+
+Build Command:
+pip install -r requirements.txt
+
+
+Start Command:
+
+gunicorn app:app
+
+
+Instance Type: Free tier.
+
+👉 Why
+
+Render gives free hosting for web apps.
+
+It auto-builds & deploys when you push to GitHub.
+
+👉 What happened
+Your Flask app is live at a free Render URL (e.g. https://flask-devops-app.onrender.com).
+
+🔹 Step 7: Monitoring Script
+
+File: monitor.py
+
+import requests, time
+
+URL = "https://flask-devops-app.onrender.com"
+
+while True:
+    try:
+        response = requests.get(URL)
+        if response.status_code == 200:
+            print("✅ App is UP")
+        else:
+            print("⚠️ Status:", response.status_code)
+    except Exception as e:
+        print("❌ App is DOWN:", e)
+    time.sleep(10)
+
+
+👉 Why
+
+Basic uptime monitoring.
+
+Demonstrates DevOps monitoring skill.
